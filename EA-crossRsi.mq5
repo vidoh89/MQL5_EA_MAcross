@@ -16,6 +16,7 @@ input int rsi_period= 8;
 //sl and tp inputs
 input double sl_input=200;
 input double tp_input=200;
+input double lot_size= 0.02;
 
 
 
@@ -78,17 +79,10 @@ int OnInit(void)
     //Use ArraySetAsSeries to reverse the index count of the slowArray[]
     ArraySetAsSeries(slowArray,true);
     
-    //Create ema to follow price closely
     
-    static int handlePriceEma = iMA(_Symbol,PERIOD_CURRENT,5,0,MODE_SMA,PRICE_CLOSE);
-    double priceArray[];
-  
-    
-    CopyBuffer(handlePriceEma,0,1,2,priceArray);
-    ArraySetAsSeries(priceArray,true);
     //---------------------------------------------------------
     //Call handle for fast Ma fastMA
-  static  int handleFastMa = iMA(_Symbol,PERIOD_CURRENT,20,0,MODE_SMA,PRICE_CLOSE);
+  static  int handleFastMa = iMA(_Symbol,PERIOD_CURRENT,MaPeriod,0,MODE_SMA,PRICE_CLOSE);
     //create array to store double values
     double fastArray[];
     //Create copyBuffer to store the fastMA values
@@ -101,7 +95,7 @@ int OnInit(void)
     if(OrdersTotal()==0 && PositionsTotal()==0)
     //if(handleFastMa>handleSlowMa && handleSlowMa<handlePriceEma)
     
-    if(adx_Func()=="Increase,Requirements met" && rsi_func()=="Bears_move" &&fastArray[0]>slowArray[0] && fastArray[1]>slowArray[1])
+    if(no_trade_func()=="Trades are live"&&adx_Func()=="Increase,Requirements met" && rsi_func()=="Bears_move" &&fastArray[0]>slowArray[0] && fastArray[1]>slowArray[1])
         //&& slowArray[0]>priceArray[0] && slowArray[1]>priceArray[1])
    
       {
@@ -114,11 +108,11 @@ int OnInit(void)
       //Create variable for tp
       double tp = ask+ tp_input*SymbolInfoDouble(_Symbol,SYMBOL_POINT);
        
-     trade.Buy(0.01,_Symbol,ask,sl,tp,"BuyTicket");
+     trade.Buy(lot_size,_Symbol,ask,sl,tp,"BuyTicket");
     }
       //Check for SMA crossing downwards
          if(OrdersTotal()==0 && PositionsTotal()==0) 
-        if (adx_Func()=="Increase,Requirements met" && rsi_func()=="Bulls_move" &&fastArray[0]<slowArray[0] && fastArray[1]<slowArray[1])
+        if (no_trade_func()=="Trades are live"&&adx_Func()=="Increase,Requirements met" && rsi_func()=="Bulls_move" &&fastArray[0]<slowArray[0] && fastArray[1]<slowArray[1])
          // && slowArray[0]<priceArray[0] && slowArray[1]<priceArray[1])
        
          {
@@ -129,13 +123,13 @@ int OnInit(void)
          double sl = bid +sl_input *SymbolInfoDouble(_Symbol,SYMBOL_POINT);
         //Create tp variable
         double tp = bid - tp_input *SymbolInfoDouble(_Symbol,SYMBOL_POINT);
-               trade.Sell(0.01,_Symbol,bid,sl_input,tp,"SellTicket");
+               trade.Sell(lot_size,_Symbol,bid,sl_input,tp,"SellTicket");
         
        }
       }//close for the time and timestamp variable comp.   
          trailStop();
            //high_low_sl();
-      Comment("\n","ADX_signal=",adx_Func(),"\n","Balance=>",accInfo,"\n","Rsi_conditions==>",rsi_func());
+      Comment("\n","ADX_signal=",adx_Func(),"\n","Balance=>",accInfo,"\n","Rsi_conditions==>",rsi_func(),"\n","Day_trade_status",no_trade_func());
      }  
    
    string adx_Func(){
@@ -148,7 +142,7 @@ int OnInit(void)
      adx_signal = "Not in range";
     
     }
-    else if(adx_array[1]>=30){
+    else if(adx_array[1]>=50){
     
     adx_signal="Increase,Requirements met";
     }
@@ -287,4 +281,17 @@ void high_low_sl(){
       
       }
    //}
+}
+
+string no_trade_func(){
+MqlDateTime structTime;
+TimeCurrent(structTime);
+int friday = structTime.day;
+string signal="";
+if(friday==5){
+ signal = "No trades on Friday"; 
+}
+else signal ="Trades are live";
+
+return signal; 
 }
